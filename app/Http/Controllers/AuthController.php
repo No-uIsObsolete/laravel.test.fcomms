@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use http\Client\Curl\User;
-use Illuminate\Http\RedirectResponse;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 
@@ -43,7 +43,7 @@ class AuthController extends Controller
             return redirect('/register')->withErrors($validator)->withInput();
         }
         //dd($validator->errors());
-        \App\Models\User::create($request->only(['username', 'email', 'password', 'firstname','lastname', 'telephone']));
+        User::create($request->only(['username', 'email', 'password', 'firstname','lastname', 'telephone']));
          return redirect('/login');
 dd(1);
 
@@ -61,11 +61,35 @@ dd(1);
     }
 function loginUser(Request $request) {
 
-    $validator = Validator::make($request->all(), [
-        'user' => ['required', 'max:45', 'email'],
-        'password' => ['required', 'confirmed'],
+
+
+//    $validator = Validator::make($request->all(), [
+//        'user' => ['required', 'max:45'],
+//        'password' => ['required', 'confirmed'],
+//    ]);
+//    if ($validator->fails()) {
+//        return redirect('/login')->withErrors($validator)->withInput();
+//    }
+
+    $login = $request->input('user');
+    $user = User::where('email', $login)->orWhere('username', $login)->first();
+    if (!$user) {
+        return redirect()->back()->withErrors(['email' => 'Invalid login credentials']);
+    }
+
+    $request->validate([
+        'password' => 'required|min:8',
     ]);
 
+    if (Auth::attempt(['email' => $user->email, 'password' => $request->password]) ||
+        Auth::attempt(['username' => $user->username, 'password' => $request->password])) {
+        Auth::loginUsingId($user->id);
+        return redirect('/dashboard');
+    } else {
+        return redirect()->back()->withErrors(['password' => 'Invalid login credentials']);
+    }
+
+    // $password = $request->input('password');
 }
 
 
